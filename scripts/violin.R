@@ -1,5 +1,6 @@
 # Load necessary libraries
 library(ggplot2)
+library(dplyr)
 
 bzea25 <- read.csv("./CLY25_data_analysis - B5_BZea_eval.csv")
 str(bzea25)
@@ -21,6 +22,7 @@ bzea25f$species <- factor(bzea25f$species, levels = species_order)
 
 # convert columns to numeric
 numeric_cols <- c("DTS", "DTA", "GDDTS", "GDDTA", "PH", "EH", "EN", "Prolif")
+
 bzea25f[numeric_cols] <- lapply(bzea25f[numeric_cols], function(x) as.numeric(as.character(x)))
 
 bzea25f$Rep <- as.factor(bzea25f$Rep)
@@ -38,14 +40,14 @@ species_colors <- c(
 )
 
 # Create the violin plot
-plotty <- ggplot(bzea25f, aes(x = species, y = EH, fill = species)) +
+plotty <- ggplot(bzea25f, aes(x = species, y = GDDTS, fill = species)) +
   geom_violin(trim = FALSE) +
   scale_fill_manual(values = species_colors) +  
   theme_minimal() +
-  labs(title = "2025 EH Distribution by Species",
+  labs(title = "2025 GDDTS Distribution by Species",
        x = "Species",
-       y = "EH (cm)") +
-  ylim(0,180) +
+       y = "GDD") +
+  ylim(600,1200) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 plotty + stat_summary(fun.data=mean_sdl, mult=1, 
@@ -70,20 +72,20 @@ species_order <- c("Dura", "Nobo", "Mesa", "Chal", "B73", "Bals", "Zdip", "Hueh"
 bzea23f$species <- factor(bzea23f$species, levels = species_order)
 
 # convert columns to numeric
-numeric_cols <- c("DTS", "DTA", "PH", "EH", "EN", "Prolif")
+numeric_cols <- c("GDDTS", "GDDTA", "DTS", "DTA", "PH", "EH", "EN", "Prolif")
 bzea23f[numeric_cols] <- lapply(bzea23f[numeric_cols], function(x) as.numeric(as.character(x)))
 
 bzea23f$Rep <- as.factor(bzea23f$Rep)
 
 # Create the violin plot
-plotty2 <- ggplot(bzea23f, aes(x = species, y = EH, fill = species)) +
+plotty2 <- ggplot(bzea23f, aes(x = species, y = GDDTS, fill = species)) +
   geom_violin(trim = FALSE) +
   scale_fill_manual(values = species_colors) +  
   theme_minimal() +
-  labs(title = "2023 EH Distribution by Species",
+  labs(title = "2023 GDDTS Distribution by Species",
        x = "Species",
-       y = "EH (cm)") +
-  ylim(0,180) +
+       y = "GDD") +
+  ylim(600,1200) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 plotty2 + stat_summary(fun.data=mean_sdl, mult=1, 
@@ -94,11 +96,11 @@ plotty2 + stat_summary(fun.data=mean_sdl, mult=1,
 
 # Combine EH and PH into long format for both years
 bzea23_long <- bzea23f %>%
-  select(species, EH, PH) %>%
+  select(species, GDDTS, GDDTA) %>%
   mutate(year = "2023")
 
 bzea25_long <- bzea25f %>%
-  select(species, EH, PH) %>%
+  select(species, GDDTS, GDDTA) %>%
   mutate(year = "2025")
 
 # Combine both years
@@ -107,7 +109,7 @@ combined_long <- bind_rows(bzea23_long, bzea25_long)
 # Pivot longer to combine EH and PH
 library(tidyr)
 combined_long <- pivot_longer(combined_long,
-                              cols = c(EH, PH),
+                              cols = c(GDDTS, GDDTA),
                               names_to = "trait",
                               values_to = "value")
 
@@ -123,8 +125,8 @@ ggplot(combined_long, aes(x = species, y = value, fill = species)) +
   scale_fill_manual(values = species_colors) +
   facet_grid(trait ~ year, scales = "free_y") +
   theme_minimal() +
-  labs(title = "EH and PH Distributions by Species (2023 & 2025)",
-       x = "Species", y = "Height") +
+  labs(title = "GDDTS and GDDTA Distributions by Species (2023 & 2025)",
+       x = "Species", y = "GDD") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ggplot(combined_long, aes(x = species, y = value, fill = species)) +
@@ -139,6 +141,6 @@ ggplot(combined_long, aes(x = species, y = value, fill = species)) +
   facet_wrap(~trait, scales = "free_y") +
   theme_minimal() +
   guides(fill = "none") +
-  labs(title = "EH and PH Distributions by Species and Year",
-       x = "Species", y = "Height") +
+  labs(title = "GDDTS and GDDTA Distributions by Species and Year",
+       x = "Species", y = "GDD") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))

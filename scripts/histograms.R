@@ -9,12 +9,12 @@ bzeadf_ff <- bzeadf_f %>%
   mutate(LA = BW * BL * 0.75)
 
 
-ggplot(bzeadf_ff, aes(x = NBR, fill = Species)) +
-  geom_histogram(binwidth = 1, color = "black", alpha = 0.7, position = "identity") +
+ggplot(bzeadf_ff, aes(x = PH, fill = Species)) +
+  geom_histogram(binwidth = 20, color = "black", alpha = 0.7, position = "identity") +
   facet_wrap(~ Species, scales = "free_y") +
   labs(
-    title = "NBR Distribution by Species",
-    x = "Number of nodes with brace roots (NBR)",
+    title = "PH Distribution by Species",
+    x = "Plant height (PH) (cm)",
     y = "Count"
   ) +
   theme_minimal()
