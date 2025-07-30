@@ -1,6 +1,5 @@
 # Load necessary libraries
 library(ggplot2)
-library(dplyr)
 
 bzea25 <- read.csv("./CLY25_data_analysis - B5_BZea_eval.csv")
 str(bzea25)
@@ -22,7 +21,6 @@ bzea25f$species <- factor(bzea25f$species, levels = species_order)
 
 # convert columns to numeric
 numeric_cols <- c("DTS", "DTA", "GDDTS", "GDDTA", "PH", "EH", "EN", "Prolif")
-
 bzea25f[numeric_cols] <- lapply(bzea25f[numeric_cols], function(x) as.numeric(as.character(x)))
 
 bzea25f$Rep <- as.factor(bzea25f$Rep)

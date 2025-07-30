@@ -81,6 +81,7 @@ library(ggthemes)
 library(dplyr)
 library(agricolae)
 library(multcompView)
+library(ggridges)
 
 
 setwd("C:/Users/Hannah Pil/Documents/gemmalab/BZea/BZea phenotyping/BZeaPheno")
@@ -90,16 +91,16 @@ BZea_df$SPAD <- as.numeric(BZea_df$SPAD)
 BZea_df$species_mex <- factor(BZea_df$species_mex, levels = c("Mex", "Hueh", "Bals", "Zlux", "Zdip", "B73"))
 
 #set order and color
-species_order <- c("Mex", "B73", "Bals", "Zdip", "Hueh", "Zlux")
+species_order <- c("B73", "Mex", "Bals", "Zdip", "Hueh", "Zlux")
 species_colors <- c("#5f9bfe", "#02bec5", "#f463e2", "#f8756d", "#b69c00", "#00b836")
 
 
 # exclude checks
 BZea_df <- BZea_df %>%
-  filter(!species_mex %in% c("Check", ""))
+  filter(!species_mex %in% c("Check", "", NA))
 
 #order
-BZea_df$Species <- factor(BZea_df$species, levels = species_order)
+BZea_df$species_mex <- factor(BZea_df$species_mex, levels = species_order)
 
 #plot with all SPAD1s overlapping
 SPAD1_plotty <- ggplot(BZea_df, aes(x = SPAD, fill=species_mex)) +
@@ -126,7 +127,7 @@ ggplot(BZea_df, aes(x=SPAD, y=species_mex, fill = factor(stat(quantile)))) +
   ) +
   scale_fill_viridis_d(name = "Quartiles")
 
-
+#points
 ggplot(BZea_df, aes(x = SPAD, y = species_mex, fill = species_mex)) +
   geom_density_ridges(
     aes(point_color = species_mex, point_fill = species_mex, point_shape = species_mex),
