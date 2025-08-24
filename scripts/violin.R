@@ -1,5 +1,8 @@
 # Load necessary libraries
 library(ggplot2)
+getwd()
+
+setwd("C:/Users/Hannah Pil/Documents/gemmalab/BZea/BZea phenotyping/BZeaPheno")
 
 bzea25 <- read.csv("./CLY25_data_analysis - B5_BZea_eval.csv")
 str(bzea25)
@@ -111,6 +114,7 @@ combined_long <- pivot_longer(combined_long,
                               names_to = "trait",
                               values_to = "value")
 
+
 # Re-set species factor levels
 combined_long$species <- factor(combined_long$species,
                                 levels = c("Dura", "Nobo", "Mesa", "Chal", "B73", "Bals", "Zdip", "Hueh", "Zlux"))
@@ -142,3 +146,58 @@ ggplot(combined_long, aes(x = species, y = value, fill = species)) +
   labs(title = "GDDTS and GDDTA Distributions by Species and Year",
        x = "Species", y = "GDD") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+#------------DTS DTA---------------------
+# Combine EH and PH into long format for both years
+bzea23_long2 <- bzea23f %>%
+  select(species, DTS, DTA) %>%
+  mutate(year = "2023")
+
+bzea25_long2 <- bzea25f %>%
+  select(species, DTS, DTA) %>%
+  mutate(year = "2025")
+
+# Combine both years
+combined_long2 <- bind_rows(bzea23_long2, bzea25_long2)
+
+# Pivot longer to combine EH and PH
+library(tidyr)
+combined_long2 <- pivot_longer(combined_long2,
+                              cols = c(DTS, DTA),
+                              names_to = "trait",
+                              values_to = "value")
+
+
+# Re-set species factor levels
+combined_long2$species <- factor(combined_long2$species,
+                                levels = c("Dura", "Nobo", "Mesa", "Chal", "B73", "Bals", "Zdip", "Hueh", "Zlux"))
+
+# Plot: PH and EH across years and species
+ggplot(combined_long2, aes(x = species, y = value, fill = species)) +
+  geom_violin(trim = FALSE) +
+  stat_summary(fun.data = mean_sdl, mult = 1,
+               geom = "pointrange", color = "black") +
+  scale_fill_manual(values = species_colors) +
+  facet_grid(trait ~ year, scales = "free_y") +
+  theme_minimal() +
+  labs(title = "DTS and DTA Distributions by Species (2023 & 2025)",
+       x = "Species", y = "Days") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(combined_long2, aes(x = species, y = value, fill = species)) +
+  geom_violin(trim = FALSE, 
+              position = position_dodge(width = 0.8), 
+              aes(group = interaction(species, year))) +
+  stat_summary(fun.data = mean_sdl, mult = 1,
+               geom = "pointrange", color = "black",
+               position = position_dodge(width = 0.8),
+               aes(group = interaction(species, year))) +
+  scale_fill_manual(values = species_colors) +
+  facet_wrap(~trait, scales = "free_y") +
+  theme_minimal() +
+  guides(fill = "none") +
+  labs(title = "GDDTS and GDDTA Distributions by Species and Year",
+       x = "Species", y = "GDD") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
