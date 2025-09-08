@@ -9,7 +9,7 @@ setwd("C:/Users/Hannah Pil/Documents/gemmalab/BZea/R/phenotyping_figures/data")
 BZea <- read.csv("D4_SPAD_edited.csv")
 
 #set order and color
-species_order <- c("Mex", "B73", "Bals", "Zdip", "Hueh", "Zlux")
+species_order <- c("B73", "Mex", "Bals", "Zdip", "Hueh", "Zlux")
 species_colors <- c("#5f9bfe", "#02bec5", "#f463e2", "#f8756d", "#b69c00", "#00b836")
 
 #set order and color
@@ -90,9 +90,8 @@ BZea_df <- read.csv("SPAD-CLY25-Fieldbook - B5_BZea_eval.csv")
 BZea_df$SPAD <- as.numeric(BZea_df$SPAD)
 BZea_df$species_mex <- factor(BZea_df$species_mex, levels = c("Mex", "Hueh", "Bals", "Zlux", "Zdip", "B73"))
 
-#set order and color
-species_order <- c("B73", "Mex", "Bals", "Zdip", "Hueh", "Zlux")
-species_colors <- c("#5f9bfe", "#02bec5", "#f463e2", "#f8756d", "#b69c00", "#00b836")
+species_order <- c("Zlux", "Mex", "Bals", "Zdip", "Hueh", "B73")
+species_colors <- c("#00b836", "#5f9bfe", "#f463e2", "#f8756d", "#b69c00", "#02bec5")
 
 
 # exclude checks
@@ -135,4 +134,30 @@ ggplot(BZea_df, aes(x = SPAD, y = species_mex, fill = species_mex)) +
   ) +
   scale_point_color_hue(l = 40) +
   scale_discrete_manual(aesthetics = "point_shape", values = c(21, 21, 21, 21, 21, 21)) +
-  labs(x = "Leaf greenness index", y = "Species")
+  labs(x = "Leaf greenness index", y = "Species") + 
+  scale_x_continuous(limits = c(-10, 80))
+
+#----------------2023 ridge-----------------------------------------------
+BZea23 <- read.csv("UPDATED_CLY23_D4_FieldBook.csv")
+
+#set order and color
+species_order <- c("Zlux", "Mex", "Bals", "Zdip", "Hueh", "B73")
+species_colors <- c("#00b836", "#5f9bfe", "#f463e2", "#f8756d", "#b69c00", "#02bec5")
+
+# exclude checks
+BZea_df23 <- BZea23 %>%
+  filter(!species_mex %in% c("Check"))
+
+#order
+BZea_df23$species_mex <- factor(BZea_df23$species_mex, levels = species_order)
+
+#points
+ggplot(BZea_df23, aes(x = SPAD2, y = species_mex, fill = species_mex)) +
+  geom_density_ridges(
+    aes(point_color = species_mex, point_fill = species_mex, point_shape = species_mex),
+    alpha = .2, point_alpha = 1, jittered_points = TRUE
+  ) +
+  scale_point_color_hue(l = 40) +
+  scale_discrete_manual(aesthetics = "point_shape", values = c(21, 21, 21, 21, 21, 21)) +
+  labs(x = "Leaf greenness index", y = "Species") +
+  scale_x_continuous(limits = c(-10, 80))

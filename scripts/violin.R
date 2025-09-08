@@ -1,15 +1,13 @@
 # Load necessary libraries
 library(ggplot2)
-getwd()
+library(dplyr)
 
-setwd("C:/Users/Hannah Pil/Documents/gemmalab/BZea/BZea phenotyping/BZeaPheno")
 
 bzea25 <- read.csv("./CLY25_data_analysis - B5_BZea_eval.csv")
 str(bzea25)
 
 bzea25 %>% filter(is.na(species))
 bzea25 %>% filter(species == "")
-setdiff(unique(bzea25f$species), species_order)
 unique(bzea25$species)
 
 
@@ -129,7 +127,14 @@ ggplot(combined_long, aes(x = species, y = value, fill = species)) +
   theme_minimal() +
   labs(title = "GDDTS and GDDTA Distributions by Species (2023 & 2025)",
        x = "Species", y = "GDD") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 16),
+    axis.text.y = element_text(size = 16),
+    axis.title = element_text(size = 18),
+    plot.title = element_text(size = 20, hjust = 0.5),
+    strip.text = element_text(size = 16)
+  ) +
+  scale_y_continuous(breaks = seq(0, 1300, 100))
 
 ggplot(combined_long, aes(x = species, y = value, fill = species)) +
   geom_violin(trim = FALSE, 
@@ -183,7 +188,13 @@ ggplot(combined_long2, aes(x = species, y = value, fill = species)) +
   theme_minimal() +
   labs(title = "DTS and DTA Distributions by Species (2023 & 2025)",
        x = "Species", y = "Days") +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 16),
+    axis.text.y = element_text(size = 16),
+    axis.title = element_text(size = 18),
+    plot.title = element_text(size = 20, hjust = 0.5),
+    strip.text = element_text(size = 16)
+    )
 
 ggplot(combined_long2, aes(x = species, y = value, fill = species)) +
   geom_violin(trim = FALSE, 
