@@ -26,18 +26,18 @@ manifest_B5 <- manifest_B5 |>
     SPAD   = as.numeric(SPAD)
   )
 
-#----SpATS model run-----
+#----example of SpATS model run-----
 
-spats1 <- SpATS(
-  response = "GDDTS",
-  spatial  = ~ SAP(Row, Range, nseg = c(2,4), degree = 3, pord = 2),
-  genotype = "Genotype",
-  random   = ~ Rep,
-  data     = manifest_B5,
-  genotype.as.random = FALSE  # true for blups and false for blues
-)
-print(spats1)
-plot(spats1)
+#spats1 <- SpATS(
+  #response = "GDDTS",
+  #spatial  = ~ SAP(Row, Range, nseg = c(2,4), degree = 3, pord = 2),
+  #genotype = "Genotype",
+  #random   = ~ Rep,
+  #data     = manifest_B5,
+  #genotype.as.random = FALSE  # true for blups and false for blues
+#)
+#print(spats1)
+#plot(spats1)
 
 #-----statgen model run--------------------------------------------
 
@@ -69,7 +69,39 @@ fit_B5_GDDTS <- fitModels(
 ## Plot spatial trend (optional visualization)
 plot(fit_B5_GDDTS, timePoints = "2024-07-01", plotType = "spatial", spaTrend = "raw")
 
+#-----------loop for all traits---------------
+traits_B5 <- c("GDDTS","GDDTA", "PH","EN","EH","NBR","SPAD")
 
+for(tr in traits_B5) {
+  
+  fit <- fitModels(
+    TP = phenoTP_B5,
+    trait = tr,
+    engine = "SpATS",
+    useCheck = TRUE
+  )
+  
+  corr <- getCorrected(fit) |>
+    rename(Plot_id = plotId) |>
+    left_join(manifest_B5[,c("Plot_id","Genotype","Rep","Row","Range")], by="Plot_id")
+  
+  write.csv(corr, paste0("B5_", tr, "_2025.csv"), row.names = FALSE)
+}
+
+#--BLUES--
+for(tr in traits_B5) {
+  
+  fit <- fitModels(
+    TP = phenoTP_B5,
+    trait = tr,
+    engine = "SpATS",
+    what = "fixed"
+  )
+  
+  geno <- getGenoPred(fit)$genoPred
+  
+  write.csv(geno, paste0("B5_", tr, "_BLUEs_2025.csv"), row.names = FALSE)
+}
 #-----------------D4 ANALYSIS------------D4 ANALYSIS--------------------D4 ANALYSIS--------------------------D4 ANALYSIS------------------------------#
 
 setwd("C:/Users/Hannah Pil/Documents/gemmalab/BZea/BZea phenotyping/BZeaPheno")
@@ -105,7 +137,53 @@ spatsD4 <- SpATS(
 )
 print(spatsD4)
 
-# Make some plots 
 
-plot(spatsD4)
+##-----statgen model run--------------------------------------------
 
+manifest_D4$TP <- as.Date("2024-07-01")  # any arbitrary date
+
+phenoTP_D4 <- createTimePoints(
+  dat            = manifest_D4,
+  experimentName = "D4_experiment",
+  genotype       = "Genotype",
+  timePoint      = "TP",
+  repId          = "Rep",
+  plotId         = "Plot_id",
+  rowNum         = "Range",
+  colNum         = "Row",
+  addCheck       = TRUE,
+  checkGenotypes = c("B73"),
+  timeFormat     = "%Y-%m-%d"     # match fake date format
+)
+
+
+## Fit spatial model for one or more traits
+fit_D4_PH <- fitModels(
+  TP       = phenoTP_D4,
+  trait    = "PH",      # choose the trait you want to model
+  engine   = "SpATS",
+  useCheck = TRUE # splits checks as fixed, others random
+)
+
+## Plot spatial trend (optional visualization)
+plot(fit_D4_PH, timePoints = "2024-07-01", plotType = "spatial", spaTrend = "raw")
+
+#-----------loop for all traits---------------
+traits_D4 <- c("GDDTS","GDDTA","PH","EH","NBR","SPAD1","SPAD2")
+
+for(tr in traits_D4) {
+  fit <- fitModels(
+    TP = phenoTP_D4,
+    trait = tr,
+    engine = "SpATS",
+    useCheck = TRUE
+  )
+  
+  corr <- getCorrected(fit) |>
+    rename(Plot_id = plotId) |>
+    left_join(manifest_D4[,c("Plot_id","Genotype","Rep","Row","Range")], by="Plot_id")
+  
+  write.csv(corr, paste0("D4_", tr, "_2023.csv"), row.names = FALSE)
+}
+
+plot(fit_D4_SPAD2, timePoints = "2024-07-01", plotType = "spatial", spaTrend = "raw")
