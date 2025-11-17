@@ -127,7 +127,7 @@ ggplot(BZea_df, aes(x=SPAD, y=species_mex, fill = factor(stat(quantile)))) +
   scale_fill_viridis_d(name = "Quartiles")
 
 #points
-ggplot(BZea_df, aes(x = SPAD, y = species_mex, fill = species_mex)) +
+q <- ggplot(BZea_df, aes(x = SPAD, y = species_mex, fill = species_mex)) +
   geom_density_ridges(
     aes(point_color = species_mex, point_fill = species_mex, point_shape = species_mex),
     alpha = .2, point_alpha = 1, jittered_points = TRUE
@@ -135,8 +135,44 @@ ggplot(BZea_df, aes(x = SPAD, y = species_mex, fill = species_mex)) +
   scale_point_color_hue(l = 40) +
   scale_discrete_manual(aesthetics = "point_shape", values = c(21, 21, 21, 21, 21, 21)) +
   labs(x = "Leaf greenness index", y = "Species") + 
-  scale_x_continuous(limits = c(-10, 80))
+  scale_x_continuous(limits = c(-10, 80)) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 0.5),
+    legend.position = "none"
+  )
 
+p <- ggplot(BZea_df, aes(x = SPAD, y = species_mex, fill = species_mex)) +
+  geom_density_ridges(
+    aes(point_color = species_mex, point_fill = species_mex, point_shape = species_mex),
+    alpha = .2, point_alpha = 1, jittered_points = TRUE
+  ) +
+  scale_point_color_hue(l = 40) +
+  scale_discrete_manual(aesthetics = "point_shape", values = c(21, 21, 21, 21, 21, 21)) +
+  labs(x = "Leaf greenness index", y = "Species") +
+  scale_x_continuous(limits = c(-10, 80)) +
+  coord_flip() +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 0.5),
+    legend.position = "none"
+  ) +
+  geom_vline(
+    xintercept = c(3.5, 16.4, 25.8, 37.7, 44.5, 54.8),
+    linetype = "dashed",
+    color = "gray60",
+    alpha = 0.7
+  )
+p
+ggsave(
+  "C:/Users/Hannah Pil/Documents/gemmalab/BZea/BZea phenotyping/BZeaPheno/output/BZea_ridges_black.png",
+  p,
+  width = 9,
+  height = 5.7,
+  dpi = 300
+)
 #----------------2023 ridge-----------------------------------------------
 BZea23 <- read.csv("UPDATED_CLY23_D4_FieldBook.csv")
 
@@ -161,3 +197,4 @@ ggplot(BZea_df23, aes(x = SPAD2, y = species_mex, fill = species_mex)) +
   scale_discrete_manual(aesthetics = "point_shape", values = c(21, 21, 21, 21, 21, 21)) +
   labs(x = "Leaf greenness index", y = "Species") +
   scale_x_continuous(limits = c(-10, 80))
+
