@@ -4,7 +4,7 @@ library(SpATS)
 library(statgenHTP)
 library(dplyr)
 
-#set up data
+#set up data--------------------------------------------------------------------
 
 setwd("C:/Users/Hannah Pil/Documents/gemmalab/BZea/BZea phenotyping/BZeaPheno")
 
@@ -27,19 +27,6 @@ manifest_B5 <- manifest_B5 |>
     NBR   = as.numeric(NBR),
     SPAD   = as.numeric(SPAD)
   )
-
-#----example of SpATS model run-----
-
-#spats1 <- SpATS(
-  #response = "GDDTS",
-  #spatial  = ~ SAP(Row, Range, nseg = c(2,4), degree = 3, pord = 2),
-  #genotype = "Genotype",
-  #random   = ~ Rep,
-  #data     = manifest_B5,
-  #genotype.as.random = FALSE  # true for blups and false for blues
-#)
-#print(spats1)
-#plot(spats1)
 
 #-----statgen model run--------------------------------------------
 
@@ -71,7 +58,7 @@ fit_B5_GDDTS <- fitModels(
 ## Plot spatial trend (optional visualization)
 plot(fit_B5_GDDTS, timePoints = "2024-07-01", plotType = "spatial", spaTrend = "raw")
 
-#-----------loop for all traits---------------
+#-----------loop for all traits to generate values---------------
 #BLUEs
 traits_B5 <- c("DTS","DTA","GDDTS","GDDTA","PH","EN","EH","NBR","SPAD")
 
@@ -91,20 +78,42 @@ for(tr in traits_B5) {
   
   write.csv(corr, paste0("B5_", tr, "_2025.csv"), row.names = FALSE)
 }
+#-----------loop to generate spatial plot------------
+traits_B5 <- c("DTS","DTA","GDDTS","GDDTA","PH","EN","EH","NBR","SPAD")
 
-#--BLUES--------------
 for(tr in traits_B5) {
   
+  # fit model
   fit <- fitModels(
-    TP = phenoTP_B5,
-    trait = tr,
+    TP     = phenoTP_B5,
+    trait  = tr,
     engine = "SpATS",
-    what = "fixed"
+    what   = "fixed"
   )
   
-  geno <- getGenoPred(fit)$genoPred
+  # show plot in r
+  plot(
+    fit,
+    timePoints = "2024-07-01",
+    plotType   = "spatial",
+    spaTrend   = "raw"
+  )
   
-  write.csv(geno, paste0("B5_", tr, "_BLUEs_2025.csv"), row.names = FALSE)
+  # save plot
+  png(
+    filename = file.path("output", "spatial",
+                         paste0("B5_", tr, "_spatial_raw_2025.png")),
+    width = 1800,
+    height = 1400,
+    res = 200
+  )
+  plot(
+    fit,
+    timePoints = "2024-07-01",
+    plotType   = "spatial",
+    spaTrend   = "raw"
+  )
+  dev.off()
 }
 
 #--------------------predicted N analysis--------------------------------------
@@ -128,7 +137,7 @@ b5_plot_avg <- b5_N |>
     Accession     = first(Accession),
     Taxa          = first(Taxa),
     M_Distance    = mean(M_Distance),
-    Predicted_N = mean(Predicted_N[M_Distance <= 4]),     # ONLY KEEP VALUES WHOSE M_DISTANCE ≤ 4
+    Predicted_N = mean(Predicted_N[M_Distance <= 4]),     # ONLY KEEP Pred_N VALUES WHOSE M_DISTANCE ≤ 4
     M_Distance  = mean(M_Distance[M_Distance <= 4]),      #same for M-distance
     .groups = "drop"
   )
@@ -152,11 +161,27 @@ fit_B5_N <- fitModels(
   TP       = pheno_b5_N,
   trait    = "Predicted_N",      
   engine   = "SpATS",
-  useCheck = TRUE 
+  what = "fixed"
 )
 
 # Plot spatial trend (optional visualization)
 plot(fit_B5_N, timePoints = "2024-07-01", plotType = "spatial", spaTrend = "raw")
+
+png(
+  filename = file.path("output", "spatial",
+                       "B5_block2_PredictedN_spatial_raw_BLUPs_2025.png"),
+  width = 1800,
+  height = 1400,
+  res = 200
+)
+plot(
+  fit_B5_N,
+  timePoints = "2024-07-01",
+  plotType   = "spatial",
+  spaTrend   = "raw"
+)
+dev.off()
+
 
 corr_B5_N <- getCorrected(fit_B5_N) |>
   rename(Plot = plotId) |>
