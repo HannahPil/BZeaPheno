@@ -25,7 +25,8 @@ manifest_B5 <- manifest_B5 |>
     EN   = as.numeric(EN),
     EH   = as.numeric(EH),
     NBR   = as.numeric(NBR),
-    SPAD   = as.numeric(SPAD)
+    SPAD   = as.numeric(SPAD),
+    LAE = as.numeric(LAE)
   )
 
 #-----statgen model run--------------------------------------------
@@ -60,7 +61,7 @@ plot(fit_B5_GDDTS, timePoints = "2024-07-01", plotType = "spatial", spaTrend = "
 
 #-----------loop for all traits to generate values---------------
 #BLUEs
-traits_B5 <- c("DTS","DTA","GDDTS","GDDTA","PH","EN","EH","NBR","SPAD")
+traits_B5 <- c("DTS","DTA","GDDTS","GDDTA","PH","EN","EH","NBR","SPAD", "LAE")
 
 for(tr in traits_B5) {
   
@@ -79,7 +80,7 @@ for(tr in traits_B5) {
   write.csv(corr, paste0("B5_", tr, "_2025.csv"), row.names = FALSE)
 }
 #-----------loop to generate spatial plot------------
-traits_B5 <- c("DTS","DTA","GDDTS","GDDTA","PH","EN","EH","NBR","SPAD")
+traits_B5 <- c("DTS","DTA","GDDTS","GDDTA","PH","EN","EH","NBR","SPAD", "LAE")
 
 for(tr in traits_B5) {
   
@@ -115,6 +116,7 @@ for(tr in traits_B5) {
   )
   dev.off()
 }
+
 
 #--------------------predicted N analysis--------------------------------------
 b5_N <- read.csv("B5_block2_predictedN.csv")
