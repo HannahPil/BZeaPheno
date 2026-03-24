@@ -1,7 +1,7 @@
 library(ggplot2)
 library(dplyr)
 
-df <- read.csv("BZea_Block2_N-predictions.csv")
+df <- read.csv("data/B5-BZ_N-predictions.csv")
 
 # keep only inbreds (this excludes B73xLH287)
 df_inbred <- df %>%
@@ -67,7 +67,7 @@ library(ggplot2)
 library(dplyr)
 
 # read data
-df <- read.csv("BZea_Block2_N-predictions.csv")
+df <- read.csv("data/B5-BZ_N-predictions.csv")
 
 # keep only inbreds and set taxa order (b73 first)
 df_inbred <- df %>%
@@ -134,7 +134,7 @@ ggplot(df_plotmeans, aes(x = Taxa, y = Predicted_N, fill = Taxa)) +
 library(ggplot2)
 library(dplyr)
 
-df_spat <- read.csv("B5_block2_PredictedN_corrected.csv")
+df_spat <- read.csv("data/B5_block2_PredictedN_corrected.csv")
 
 df_spat <- df_spat %>%
   filter(!is.na(Taxa)) %>%              # <-- drop NA taxa
@@ -191,7 +191,7 @@ ggplot(df_spat, aes(x = Taxa, y = Predicted_N_corr, fill = Taxa)) +
 library(ggplot2)
 library(dplyr)
 
-pred_raw <- read.csv("B5_block2_predictedN.csv")
+pred_raw <- read.csv("data/B5_block2_predictedN.csv")
 
 pred_clean <- pred_raw %>%
   filter(
@@ -251,7 +251,7 @@ ggplot(pred_plot_means, aes(x = Taxa, y = mean_PredN, fill = Taxa)) +
 library(ggplot2)
 library(dplyr)
 
-df_spat <- read.csv("B5_block2_PredictedN_corrected.csv")
+df_spat <- read.csv("data/B5_block2_PredictedN_corrected.csv")
 
 # drop NA taxa, reorder
 df_spat <- df_spat %>%
@@ -286,7 +286,7 @@ group_means <- plot_means %>%
 # plot plot-means
 ggplot(plot_means, aes(x = Taxa, y = mean_N, fill = Taxa)) +
   geom_jitter(
-    shape = 21, size = 3, alpha = 0.8,
+    shape = 21, size = 4, alpha = 0.8,
     position = position_jitter(width = 0.1)
   ) +
   geom_errorbar(
@@ -316,8 +316,8 @@ ggplot(plot_means, aes(x = Taxa, y = mean_N, fill = Taxa)) +
 
 
 #----correlation between SPAD and predicted_N----------------
-spad <- read.csv("corr_B5.csv")
-pred_N <- read.csv("B5_block2_PredictedN_corrected.csv")
+spad <- read.csv("data/corr_B5.csv")
+pred_N <- read.csv("data/B5_block2_PredictedN_corrected.csv")
 
 df <- spad %>%
   select(Plot, SPAD_corr) %>%

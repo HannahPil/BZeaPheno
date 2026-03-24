@@ -2,7 +2,7 @@ library(tidyverse)
 
 #----------------------------- read + filter -----------------------------------
 
-B5 <- read.csv("corr_B5.csv")
+B5 <- read.csv("data/corr_B5.csv")
 
 B5_f <- B5 %>%
   filter((is.na(notes1) | notes1 == "") & (is.na(notes2) | notes2 == "") &
@@ -89,7 +89,7 @@ library(quantreg)
 
 #----------------------------- read + filter -----------------------------------
 
-B5 <- read.csv("corr_B5.csv")
+B5 <- read.csv("data/corr_B5.csv")
 
 B5_f <- B5 %>%
   filter((is.na(notes1) | notes1 == "") & (is.na(notes2) | notes2 == "") &
@@ -237,7 +237,7 @@ ggsave(
 #-------------------predicted N------------------------------------
 #----------------------------- read + filter -----------------------------------
 
-B5 <- read.csv("corr_B5.csv")
+B5 <- read.csv("data/corr_B5.csv")
 
 B5_f <- B5 %>%
   filter((is.na(notes1) | notes1 == "") & (is.na(notes2) | notes2 == "") &

@@ -2,8 +2,8 @@ library(tidyverse)
 
 #----------------------------- read in corrected dfs ---------------------------
 
-B5 <- read.csv("corr_B5.csv")
-D4 <- read.csv("corr_D4.csv")
+B5 <- read.csv("data/corr_B5.csv")
+D4 <- read.csv("data/corr_D4.csv")
 
 #----------------------------- filter (match your example) ---------------------
 # example filter: Species != "Check" & Notes == ""

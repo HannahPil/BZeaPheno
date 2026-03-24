@@ -1,0 +1,561 @@
+---
+title: "CLY23 Phenotype Analysis: PCA and Heritability"
+author: "Analysis Report"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: show
+    code_download: true
+    theme: flatly
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 10,
+  fig.height = 7
+)
+
+# Set working directory
+knitr::opts_knit$set(root.dir = "/Users/fvrodriguez/Desktop/inv4m/heritability")
+```
+
+## Load Libraries
+
+**Purpose**: Load required packages for data manipulation, visualization, and multivariate analysis.
+
+**Approach**: Load tidyverse ecosystem and PCA visualization packages.
+
+**Expected outcome**: All dependencies available for downstream analysis.
+
+```{r load_libraries}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(MASS)
+library(FactoMineR)
+library(factoextra)
+library(ggbeeswarm)
+library(ggpubr)
+```
+
+## Import LI-COR Data
+
+**Purpose**: Import photosynthesis measurements from local CSV.
+
+**Approach**: Read PhiPS2 data from exported CSV, parse sample IDs to extract field coordinates.
+
+**Expected outcome**: Clean dataframe with CLY23_D4 plot IDs and PhiPS2 values.
+
+```{r import_licor}
+# Read from local CSV (exported from Google Sheets)
+licor_raw <- read.csv("licor_data.csv", skip = 1)
+
+# Parse sample IDs
+licor <- stringr::str_split(licor_raw$BZea, "_", simplify = TRUE) %>% 
+  as.data.frame()
+colnames(licor) <- c("field_year", "section", "CLY23_D4")
+licor$CLY23_D4 <- as.numeric(licor$CLY23_D4)
+licor$PhiPS2 <- as.numeric(licor_raw$PhiPS2)
+
+# Diagnostics
+{
+cat("LI-COR records:", nrow(licor), "\n")
+cat("PhiPS2 range:", range(licor$PhiPS2, na.rm = TRUE), "\n")
+}
+```
+
+## Import and Process CLY23 Field Data
+
+**Purpose**: Import main phenotype data and calculate derived traits.
+
+**Approach**: Read field book CSV, calculate flowering time metrics (DTS, DTA, ASI), parse donor identifiers, merge with LI-COR data.
+
+**Expected outcome**: Complete CLY23 dataframe with all phenotypes and donor metadata.
+
+```{r import_cly23}
+planting_date <- mdy("4/4/2023")
+
+CLY23 <- read.csv("CLY23_D4_FieldBook.csv") %>%
+  rename(silking = "DTS", anthesis = "DTA", pedigree = "Female_genotype") %>%
+  mutate(
+    DTS = (mdy(silking) - planting_date) %>% as.integer(),
+    DTA = (mdy(anthesis) - planting_date) %>% as.integer(),
+    dSPAD = SPAD2 - SPAD1,
+    donor_pop = gsub("-.*", "", pedigree, perl = TRUE),
+    donor_line = gsub("_P.*?$", "", pedigree, perl = TRUE)
+  ) %>%
+  left_join(licor %>% dplyr::select(CLY23_D4, PhiPS2))
+
+# Clean donor_line strings
+CLY23$donor_line <- gsub("^.*?-", "", CLY23$donor_line, perl = TRUE)
+CLY23$donor_line <- gsub("-+", "_", CLY23$donor_line, perl = TRUE)
+CLY23$donor_line <- gsub("\\(.*", "", CLY23$donor_line, perl = TRUE)
+CLY23$donor_line <- gsub("-", "_", CLY23$donor_line, perl = TRUE)
+CLY23$donor_line <- gsub(" +$", "", CLY23$donor_line, perl = TRUE)
+
+# Calculate derived traits
+CLY23$ASI <- CLY23$DTS - CLY23$DTA
+CLY23$LL <- CLY23$SL + CLY23$BL
+CLY23$StPu <- as.factor(CLY23$StPu) %>% as.numeric() - 1
+CLY23$StPi <- as.factor(CLY23$StPi) %>% as.numeric() - 1
+CLY23$donor_line <- factor(CLY23$donor_line)
+
+# Diagnostics
+{
+cat("CLY23 records:", nrow(CLY23), "\n")
+cat("Donor populations:", length(unique(CLY23$donor_pop)), "\n")
+cat("Donor lines:", nlevels(CLY23$donor_line), "\n")
+cat("Available traits:", paste(colnames(CLY23), collapse = ", "), "\n")
+}
+```
+
+## Define Trait Categories
+
+**Purpose**: Organize phenotypic variables into functional categories for analysis and visualization.
+
+**Approach**: Create vectors of trait names and corresponding category labels.
+
+**Expected outcome**: Trait and category vectors for downstream analysis.
+
+```{r define_traits}
+vars <- c("DTA", "DTS", "ASI", "PH", "EH", "EN", "BW", "BL", "SL", "LL", 
+          "NBR", "SPAD1", "SPAD2", "dSPAD", "PhiPS2", "StPu", "StPi")
+
+var_type <- c("FT", "FT", "FT", "Plant Size", "Ear", "Ear", "Plant Size", 
+              "Plant Size", "Plant Size", "Plant Size", "Plant Size", 
+              "Photosynthesis", "Photosynthesis", "Photosynthesis", "Photosynthesis", 
+              "Highland", "Highland")
+
+var_pal <- c("darkgoldenrod1", "darkred", "darkmagenta", "darkgreen", "burlywood")
+
+# Diagnostics
+{
+cat("Traits defined:", length(vars), "\n")
+cat("Categories:", paste(unique(var_type), collapse = ", "), "\n")
+}
+```
+
+## Prepare PCA Data
+
+**Purpose**: Aggregate phenotype data to genotype means for PCA.
+
+**Approach**: Filter out controls, group by pedigree, calculate trait means across replicates.
+
+**Expected outcome**: Genotype-level means suitable for multivariate analysis.
+
+```{r prep_pca}
+# Genotype categories for plotting
+cats <- CLY23 %>%
+  dplyr::filter(donor_pop != "Purple Check") %>%
+  droplevels() %>%
+  dplyr::select(donor_pop, donor_line, pedigree, Rep) %>%
+  group_by(donor_pop, donor_line, pedigree) %>%
+  summarize(n = n(), .groups = "drop")
+
+# Genotype means for PCA
+to_pca <- CLY23 %>%
+  dplyr::select(donor_pop, donor_line, pedigree, Rep, all_of(vars)) %>%
+  droplevels() %>%
+  dplyr::filter(donor_pop != "Purple Check") %>%
+  group_by(pedigree) %>%
+  summarise(across(all_of(vars), ~ mean(.x, na.rm = TRUE)), .groups = "drop")
+
+# Diagnostics
+{
+cat("Genotypes for PCA:", nrow(to_pca), "\n")
+cat("Traits with complete data:", sum(colSums(is.na(to_pca[,-1])) == 0), "/", length(vars), "\n")
+}
+```
+
+## Principal Component Analysis
+
+**Purpose**: Reduce dimensionality and identify major axes of phenotypic variation.
+
+**Approach**: Run PCA on genotype means, visualize individual and variable contributions.
+
+**Expected outcome**: PCA plots showing genotype clustering by donor population and trait loadings.
+
+```{r run_pca}
+pca <- PCA(to_pca[, -1], graph = FALSE)
+
+# Diagnostics
+{
+cat("=== PCA Variance Explained ===\n")
+cat("PC1:", round(pca$eig[1, 2], 1), "%\n")
+cat("PC2:", round(pca$eig[2, 2], 1), "%\n")
+cat("Cumulative (PC1-2):", round(pca$eig[2, 3], 1), "%\n")
+}
+```
+
+```{r pca_individuals, fig.cap="PCA of genotypes colored by donor population"}
+fviz_pca_ind(
+  pca, 
+  col.ind = cats$donor_pop, 
+  geom = "point", 
+  pointsize = 2,
+  addEllipses = TRUE
+) +
+  guides(
+    col = guide_legend(title = "Donor", override.aes = aes(label = "")),
+    shape = "none", 
+    fill = "none"
+  ) +
+  theme_classic2(base_size = 15)
+```
+
+```{r pca_variables, fig.cap="PCA variable loadings by trait category"}
+fviz_pca_var(pca, col.var = as.factor(var_type)) +
+  scale_color_manual(values = var_pal) +
+  guides(
+    col = guide_legend(title = "Type", override.aes = aes(label = ""))
+  ) +
+  theme_classic2(base_size = 15)
+```
+
+## Trait Correlations
+
+**Purpose**: Examine pairwise correlations among phenotypic traits.
+
+**Approach**: Compute correlation matrix using pairwise complete observations.
+  
+**Expected outcome**: Correlation matrix revealing trait relationships.
+
+```{r trait_correlations}
+cor_matrix <- cor(to_pca[, -1], use = "pairwise.complete.obs")
+round(cor_matrix, 2)
+```
+
+## Broad-Sense Heritability by Trait
+
+**Purpose**: Estimate H² for each phenotypic trait.
+
+**Approach**: For each trait, subset to genotypes with all 3 replicates, fit one-way ANOVA, partition variance.
+
+**Expected outcome**: Heritability estimates for all measured traits.
+
+```{r heritability_calculation}
+her <- data.frame()
+
+for (trait in vars) {
+  # Remove NAs for this trait
+  without_NA <- CLY23[!is.na(CLY23[, trait]), ]
+  
+  # Keep only genotypes with all 3 reps
+  with_reps <- as.data.frame(table(line = without_NA$pedigree)) %>%
+    filter(Freq == 3) %>%
+    pull(line)
+  
+  to_H2 <- without_NA %>%
+    filter(pedigree %in% with_reps)
+  
+  # Fit ANOVA model
+  formula <- as.formula(paste0(trait, " ~ pedigree"))
+  mod <- lm(data = to_H2, formula)
+  mod_aov <- anova(mod)
+  
+  # Calculate H2
+  her <- rbind(her, data.frame(
+    trait = trait,
+    H2 = mod_aov$`Sum Sq`[1] / sum(mod_aov$`Sum Sq`),
+    n_geno = length(with_reps)
+  ))
+}
+
+her$type <- var_type
+
+# Diagnostics
+{
+cat("=== Heritability Estimates ===\n")
+print(her %>% arrange(desc(H2)))
+}
+```
+
+```{r heritability_plot, fig.cap="Broad-sense heritability by trait"}
+her %>%
+  mutate(trait = forcats::fct_reorder(trait, H2, .desc = TRUE)) %>%
+  ggplot(aes(x = trait, y = H2, fill = type)) +
+  geom_col() +
+  ylab("Broad-Sense Heritability (H²)") +
+  xlab("Trait") +
+  scale_fill_manual(values = var_pal) +
+  theme_classic2(base_size = 15) +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    legend.position = "top"
+  )
+```
+
+## Import CLY22 Brace Root Data
+
+**Purpose**: Import previous year's brace root data for cross-year comparison.
+
+**Approach**: Read CLY22 field book, filter to J2Teo project, parse donor identifiers.
+
+**Expected outcome**: Clean CLY22 dataframe for GxE analysis.
+
+```{r import_cly22}
+CLY22 <- read.csv("CLY-22-RRA-Field-Book - B6Field.csv") %>%
+  dplyr::filter(Project == "J2Teo") %>%
+  dplyr::mutate(
+    donor_pop = gsub("-.*", "", Description, perl = TRUE),
+    donor_line = gsub("_P.*?$", "", Description, perl = TRUE)
+  )
+
+CLY22$brace_root <- as.numeric(CLY22$brace_root)
+
+# Clean donor_line strings
+CLY22$donor_line <- gsub("^.*?-", "", CLY22$donor_line, perl = TRUE)
+CLY22$donor_line <- gsub("-+", "_", CLY22$donor_line, perl = TRUE)
+CLY22$donor_line <- gsub("\\(.*", "", CLY22$donor_line, perl = TRUE)
+CLY22$donor_line <- gsub("-", "_", CLY22$donor_line, perl = TRUE)
+CLY22$donor_line <- gsub(" +$", "", CLY22$donor_line, perl = TRUE)
+
+# Diagnostics
+{
+cat("CLY22 J2Teo records:", nrow(CLY22), "\n")
+cat("Brace root range:", range(CLY22$brace_root, na.rm = TRUE), "\n")
+}
+```
+
+## Combine Brace Root Data Across Years
+
+**Purpose**: Merge brace root measurements from CLY22 and CLY23 for GxE analysis.
+
+**Approach**: Standardize column names, stack datasets with field year indicator.
+
+**Expected outcome**: Combined dataframe for cross-environment analysis.
+
+```{r combine_br_data}
+BR <- rbind(
+  CLY22 %>%
+    dplyr::select(donor_line, donor_pop, NBR = brace_root) %>%
+    dplyr::filter(donor_pop != "Purple Check") %>%
+    mutate(field = "CLY22"),
+  
+  CLY23 %>%
+    dplyr::filter(Rep == 3) %>%
+    dplyr::select(donor_line, donor_pop, NBR) %>%
+    dplyr::filter(donor_pop != "Purple Check") %>%
+    mutate(field = "CLY23")
+)
+
+field_mean <- BR %>%
+  group_by(field) %>%
+  summarise(br_mean = mean(NBR, na.rm = TRUE), .groups = "drop")
+
+# Diagnostics
+{
+cat("=== Combined Brace Root Data ===\n")
+print(table(BR$field, BR$donor_pop))
+cat("\nField means:\n")
+print(field_mean)
+}
+```
+
+## Brace Root Variation by Population and Year
+
+**Purpose**: Visualize brace root number variation across donor populations and field years.
+
+**Approach**: Faceted beeswarm plots with population means and field-level reference lines.
+
+**Expected outcome**: Visual comparison of NBR distributions across populations and environments.
+
+```{r br_population_plot, fig.cap="Brace root number by donor population and field year", fig.height=9}
+BR %>%
+  ggplot(aes(x = donor_pop, y = NBR, group = donor_pop, col = donor_pop)) +
+  geom_quasirandom() +
+  geom_hline(
+    data = field_mean,
+    aes(yintercept = br_mean),
+    colour = "black", linetype = 2
+  ) +
+  stat_summary(
+    fun.data = mean_cl_normal,
+    geom = "pointrange",
+    col = "black"
+  ) +
+  facet_wrap(~field, ncol = 1) +
+  scale_y_continuous(breaks = 0:6) +
+  xlab("Donor Population") +
+  ylab("Number of Brace Roots") +
+  theme_classic2(base_size = 15) +
+  theme(
+    legend.position = "none",
+    strip.background = element_rect(colour = "white", fill = "white"),
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)
+  )
+```
+
+## Brace Root Heritability by Year
+
+**Purpose**: Estimate heritability of brace root number within each field year.
+
+**Approach**: Fit one-way ANOVA (NBR ~ donor_line) separately for each year.
+
+**Expected outcome**: Year-specific H² estimates for brace root number.
+
+```{r br_heritability_by_year}
+# CLY22 heritability
+br22_aov <- lm(formula = NBR ~ donor_line, data = BR[BR$field == "CLY22", ])
+s22 <- summary(br22_aov)
+
+# CLY23 heritability
+br23_aov <- lm(formula = NBR ~ donor_line, data = BR[BR$field == "CLY23", ])
+s23 <- summary(br23_aov)
+
+# Diagnostics
+{
+cat("=== Brace Root H² by Year ===\n")
+cat("CLY22 H² (R²):", round(s22$r.squared, 3), "\n")
+cat("CLY23 H² (R²):", round(s23$r.squared, 3), "\n")
+}
+```
+
+## Genotype × Environment Analysis
+
+**Purpose**: Partition variance into genotype, environment, and GxE components for brace root.
+
+**Approach**: Fit two-way ANOVA with interaction (NBR ~ donor_line * field), extract variance components.
+
+**Expected outcome**: Proportion of variance explained by genotype, field year, and their interaction.
+
+```{r gxe_analysis}
+# Full GxE model
+br_gxe_mod <- lm(formula = NBR ~ donor_line * field, data = BR)
+gxe_aov <- anova(br_gxe_mod)
+
+# Variance components
+var_components <- data.frame(
+  source = c("Genotype", "Field", "G×E", "Residual"),
+  sum_sq = gxe_aov$`Sum Sq`,
+  prop_var = gxe_aov$`Sum Sq` / sum(gxe_aov$`Sum Sq`)
+)
+
+# Summary table
+gxe_summary <- data.frame(
+  field = c("CLY22", "CLY23", "Combined"),
+  H2_fam = c(
+    s22$r.squared, 
+    s23$r.squared, 
+    gxe_aov$`Sum Sq`[1] / sum(gxe_aov$`Sum Sq`)
+  ),
+  field_year = c(NA, NA, gxe_aov$`Sum Sq`[2] / sum(gxe_aov$`Sum Sq`)),
+  GxFY = c(NA, NA, gxe_aov$`Sum Sq`[3] / sum(gxe_aov$`Sum Sq`))
+)
+
+# Diagnostics
+{
+cat("=== Variance Components ===\n")
+print(var_components)
+cat("\n=== GxE Summary ===\n")
+print(gxe_summary)
+}
+```
+
+## Population-Level GxE Analysis
+
+**Purpose**: Estimate heritability and GxE within each donor population.
+
+**Approach**: Split data by population, fit GxE models where both years are represented.
+
+**Expected outcome**: Population-specific variance partitioning.
+
+```{r population_gxe}
+BR$field_donor <- interaction(factor(BR$field), factor(BR$donor_pop))
+
+# Diagnostic: show donor_line counts per field × donor_pop combination
+line_counts <- BR %>%
+  group_by(field, donor_pop) %>%
+  summarise(
+    n_obs = n(),
+    n_lines = n_distinct(donor_line),
+    .groups = "drop"
+  ) %>%
+  arrange(n_lines)
+
+# Diagnostics
+{
+cat("=== Donor Lines per Field × Population ===\n")
+cat("(Combinations with n_lines < 2 will be skipped)\n\n")
+print(as.data.frame(line_counts))
+cat("\nSkipped combinations:", sum(line_counts$n_lines < 2), "\n")
+}
+
+# H2 by population within each field
+br_list_field <- split(BR, f = BR$field_donor)
+
+H2_pop <- lapply(names(br_list_field), FUN = function(x) {
+  df <- br_list_field[[x]]
+  n_lines <- length(unique(df$donor_line))
+  if (nrow(df) < 3 || n_lines < 2) return(NULL)
+  
+  df$donor_line <- factor(df$donor_line)
+  lm_aov <- lm(data = df, NBR ~ donor_line) %>% anova()
+  
+  data.frame(
+    field = df$field[1],
+    donor_pop = df$donor_pop[1],
+    H2_fam = lm_aov$`Sum Sq`[1] / sum(lm_aov$`Sum Sq`)
+  )
+}) %>% 
+  dplyr::bind_rows()
+
+# GxE by population (across fields)
+br_list_pop <- split(BR, f = BR$donor_pop)
+
+# Diagnostic: show which populations have data in both fields
+pop_field_summary <- BR %>%
+  group_by(donor_pop) %>%
+  summarise(
+    n_fields = n_distinct(field),
+    n_lines = n_distinct(donor_line),
+    .groups = "drop"
+  )
+
+# Diagnostics
+{
+cat("\n=== Population Summary for GxE Analysis ===\n")
+cat("(Populations with n_fields < 2 or n_lines < 2 will be skipped)\n\n")
+print(as.data.frame(pop_field_summary))
+}
+
+H2_pop_gxe <- lapply(names(br_list_pop), FUN = function(x) {
+  df <- br_list_pop[[x]]
+  field_count <- table(df$donor_line, df$field) %>% as.data.frame()
+  n_field <- length(unique(field_count[, 2]))
+  n_lines <- length(unique(df$donor_line))
+  
+  if (n_field < 2 || n_lines < 2) return(NULL)
+  
+  df$donor_line <- factor(df$donor_line)
+  lm_aov <- lm(data = df, NBR ~ donor_line * field) %>% anova()
+  
+  data.frame(
+    donor_pop = df$donor_pop[1],
+    H2_fam = lm_aov$`Sum Sq`[1] / sum(lm_aov$`Sum Sq`),
+    GxF = lm_aov$`Sum Sq`[3] / sum(lm_aov$`Sum Sq`),
+    field = lm_aov$`Sum Sq`[2] / sum(lm_aov$`Sum Sq`),
+    residuals = lm_aov$`Sum Sq`[4] / sum(lm_aov$`Sum Sq`)
+  )
+}) %>% 
+  dplyr::bind_rows()
+
+# Diagnostics
+{
+cat("=== H² by Population and Field ===\n")
+print(H2_pop)
+cat("\n=== Population-Level GxE ===\n")
+print(H2_pop_gxe)
+}
+```
+
+## Session Info
+
+```{r session_info}
+sessionInfo()
+```

@@ -7,13 +7,13 @@ library(ggplot2)
 library(scales)
 
 # format rds-derived object that contains teosinte genotype segments
-teogeno <- readRDS("results_list_new_name.rds")
+teogeno <- readRDS("data/results_list_new_name.rds")
 
 length(teogeno)
 
 # -------------------- UPDATED METADATA SOURCE --------------------
 # read in B5 corrected phenotype / metadata table
-B5_corr <- read_csv("corr_B5.csv", show_col_types = FALSE)
+B5_corr <- read_csv("data/corr_B5.csv", show_col_types = FALSE)
 
 # derive metadata with genotype names matching teogeno (add .B)
 metadata <- B5_corr %>%
@@ -219,13 +219,11 @@ p_all <- ggplot(win_full_all) +
   labs(
     title = "Introgression count heatmap",
     subtitle = paste0(
-      "window size = ", format(window_bp, scientific = FALSE),
-      " bp; fill = number of genotypes with introgression overlapping window (n = ",
-      n_total_genotypes, ")"
+      "window size = ", format(window_bp, scientific = FALSE)
     ),
     fill = "n lines"
   ) +
-  theme_minimal(base_size = 12) +
+  theme_minimal(base_size = 30) +  
   theme(
     panel.grid = element_blank(),
     strip.placement = "outside",

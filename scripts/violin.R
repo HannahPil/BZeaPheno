@@ -19,8 +19,8 @@ species_colors <- c(
 
 #------------------------------read + filter------------------------------------
 
-B5 <- read.csv("corr_B5.csv")
-D4 <- read.csv("corr_D4.csv")
+B5 <- read.csv("data/corr_B5.csv")
+D4 <- read.csv("data/corr_D4.csv")
 
 # match your filtering logic: notes empty + species not check + trait not NA
 B5f <- B5 %>%
@@ -96,8 +96,6 @@ ggsave(
 
 #------------------------------plot 2: dodged----------------------------------
 
-pd <- position_dodge(width = 0.8)
-
 p_pattern <- ggplot(
   combined_long,
   aes(
@@ -132,30 +130,47 @@ p_pattern <- ggplot(
       "2025" = "none"
     )
   ) +
-  facet_grid(trait ~ ., scales = "free_y", switch = "y") +
-  theme_minimal() +
-  guides(
-    fill = "none",
-    pattern = guide_legend(override.aes = list(fill = "white", pattern = c("stripe", "none")))
+  facet_grid(
+    trait ~ .,
+    scales = "free_y",
+    switch = "y",
+    labeller = labeller(trait = function(x) gsub(" \\(corrected\\)", "", x))
   ) +
   labs(
-    title = "Corrected GDDTS and GDDTA by Species (striped = 2023, solid = 2025)",
     x = "Species",
     y = "GDD",
     pattern = "Year"
   ) +
+  theme_minimal() +
   theme(
+    text = element_text(size = 16),
     axis.text.x = element_text(angle = 45, hjust = 1, size = 16),
     axis.text.y = element_text(size = 16),
-    axis.title.x = element_text(size = 18),
-    axis.title.y = element_text(size = 18),
-    plot.title = element_text(size = 20, hjust = 0.5),
-    strip.text = element_text(size = 16),
-    legend.title = element_text(size = 16),
-    legend.text = element_text(size = 14),
+    axis.title.x = element_text(size = 20),
+    axis.title.y = element_text(size = 20),
+    strip.text = element_text(size = 18),
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 16),
     strip.placement = "outside",
     strip.background = element_blank()
+  ) +
+  guides(
+    fill = "none",
+    pattern = guide_legend(
+      override.aes = list(fill = "white", pattern = c("stripe", "none"))
+    )
+  ) +
+  scale_y_continuous(
+    breaks = function(x) {
+      rng <- range(x, na.rm = TRUE)
+      seq(
+        floor(rng[1] / 200) * 200,
+        ceiling(rng[2] / 200) * 200,
+        by = 100
+      )
+    }
   )
+
 
 # print
 p_pattern

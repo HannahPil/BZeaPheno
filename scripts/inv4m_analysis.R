@@ -2,7 +2,7 @@ library(lme4)
 library(dplyr)
 library(lmerTest)
 
-inv4m_df <- read.csv("BZea_inv4m.csv")
+inv4m_df <- read.csv("data/BZea_inv4m.csv")
 
 
 inv4m_df <- inv4m_df |>

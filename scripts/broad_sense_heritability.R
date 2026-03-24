@@ -7,7 +7,7 @@ library(ggplot2)
 #------------------------------- B5 --------------------------------------------
 
 # read in df
-B5 <- read.csv("corr_B5.csv")
+B5 <- read.csv("data/corr_B5.csv")
 
 # keep types sensible
 B5 <- B5 %>%
@@ -89,7 +89,7 @@ results_B5_lme4$trait
 #------------------------------- D4 --------------------------------------------
 
 # read in df
-D4 <- read.csv("corr_D4.csv")
+D4 <- read.csv("data/corr_D4.csv")
 
 # keep types sensible
 D4 <- D4 %>%

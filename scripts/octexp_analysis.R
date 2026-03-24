@@ -5,7 +5,7 @@ library(ggplot2)
 # load + merge datasets
 # ================================================================
 
-GHoct <- read.csv("greenhouse_octexp_analysis.csv") %>%
+GHoct <- read.csv("data/greenhouse_octexp_analysis.csv") %>%
   mutate(
     dataset = "GH",
     week = as.integer(week),
@@ -27,7 +27,7 @@ GHoct <- read.csv("greenhouse_octexp_analysis.csv") %>%
     M_distance
   )
 
-B5oct <- read.csv("B5_octexp_analysis.csv") %>%
+B5oct <- read.csv("data/B5_octexp_analysis.csv") %>%
   mutate(
     dataset = "B5",
     week = as.integer(week),
@@ -277,7 +277,7 @@ ggsave(
   dpi = 300
 )
 
-ok# ================================================================
+# ================================================================
 # b5 spaghetti by leaf (e1 left, e3 right)
 # ================================================================
 
@@ -362,6 +362,97 @@ ggsave(
   filename = "output/B5_spaghetti_by_leaf.png",
   plot = p_b5_spaghetti_by_leaf,
   width = 8,
+  height = 5,
+  dpi = 300
+)
+
+# ================================================================
+# b5 spaghetti by leaf (e1 left, e3 right) -- ONLY check/hihi/lolo
+# ================================================================
+
+# unit-level values per leaf (each plot contributes one value per week per leaf)
+b5_unit_week_leaf <- oct_all_avg %>%
+  filter(
+    dataset == "B5",
+    leaf %in% c("e1", "e3"),
+    group %in% c("check", "hihi", "lolo")   # keep only these groups
+  ) %>%
+  group_by(week, group, unit_id, leaf) %>%
+  summarise(
+    Predicted_N = ifelse(
+      all(is.na(Predicted_N)),
+      NA_real_,
+      mean(Predicted_N, na.rm = TRUE)
+    ),
+    .groups = "drop"
+  ) %>%
+  filter(!is.na(week)) %>%
+  arrange(leaf, group, unit_id, week)
+
+print(b5_unit_week_leaf)
+
+# group means per leaf
+b5_week_group_leaf <- b5_unit_week_leaf %>%
+  group_by(week, group, leaf) %>%
+  summarise(
+    Predicted_N = ifelse(
+      all(is.na(Predicted_N)),
+      NA_real_,
+      mean(Predicted_N, na.rm = TRUE)
+    ),
+    .groups = "drop"
+  ) %>%
+  arrange(leaf, group, week)
+
+print(b5_week_group_leaf)
+
+p_b5_spaghetti_by_leaf <- ggplot() +
+  # thin unit trajectories
+  geom_line(
+    data = b5_unit_week_leaf,
+    aes(x = week, y = Predicted_N, group = unit_id, color = group),
+    linewidth = 1,
+    alpha = 0.25
+  ) +
+  # thick group means
+  geom_line(
+    data = b5_week_group_leaf,
+    aes(x = week, y = Predicted_N, group = group, color = group),
+    linewidth = 1.6
+  ) +
+  # big points on group means
+  geom_point(
+    data = b5_week_group_leaf,
+    aes(x = week, y = Predicted_N, color = group),
+    size = 3
+  ) +
+  facet_grid(
+    . ~ leaf,
+    labeller = as_labeller(c(
+      e1 = "e1 (younger leaf)",
+      e3 = "e3 (older leaf)"
+    ))
+  ) +
+  scale_color_manual(
+    values = c(
+      hihi  = "green3",
+      lolo  = "salmon",
+      check = "grey60"
+    )
+  ) +
+  labs(
+    x = "Weeks after flowering",
+    y = "Predicted N",
+    color = "Group"
+  ) +
+  theme_classic(base_size = 18)
+
+p_b5_spaghetti_by_leaf
+
+ggsave(
+  filename = "output/octexp_analysis/B5_spaghetti_by_leaf_check_hihi_lolo.png",
+  plot = p_b5_spaghetti_by_leaf,
+  width = 9,
   height = 5,
   dpi = 300
 )

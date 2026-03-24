@@ -5,8 +5,7 @@ library(agricolae)
 library(multcompView)
 library(ggridges)
 
-setwd("C:/Users/Hannah Pil/Documents/gemmalab/BZea/R/phenotyping_figures/data")
-BZea <- read.csv("D4_SPAD_edited.csv")
+BZea <- read.csv("C:/Users/Hannah Pil/Documents/gemmalab/BZea/R/phenotyping_figures/data/D4_SPAD_edited.csv")
 
 #set order and color
 species_order <- c("B73", "Mex", "Bals", "Zdip", "Hueh", "Zlux")
@@ -76,16 +75,7 @@ print(overlap_plotty)
 
 #----------2025 SPAD---------------------------------------------------
 
-library(ggplot2)
-library(ggthemes)
-library(dplyr)
-library(agricolae)
-library(multcompView)
-library(ggridges)
-
-
-setwd("C:/Users/Hannah Pil/Documents/gemmalab/BZea/BZea phenotyping/BZeaPheno")
-BZea_df <- read.csv("SPAD-CLY25-Fieldbook - B5_BZea_eval.csv")
+BZea_df <- read.csv("data/SPAD-CLY25-Fieldbook - B5_BZea_eval.csv")
 
 BZea_df$SPAD <- as.numeric(BZea_df$SPAD)
 BZea_df$species_mex <- factor(BZea_df$species_mex, levels = c("Mex", "Hueh", "Bals", "Zlux", "Zdip", "B73"))
@@ -143,6 +133,8 @@ q <- ggplot(BZea_df, aes(x = SPAD, y = species_mex, fill = species_mex)) +
     legend.position = "none"
   )
 
+q
+
 p <- ggplot(BZea_df, aes(x = SPAD, y = species_mex, fill = species_mex)) +
   geom_density_ridges(
     aes(point_color = species_mex, point_fill = species_mex, point_shape = species_mex),
@@ -166,15 +158,16 @@ p <- ggplot(BZea_df, aes(x = SPAD, y = species_mex, fill = species_mex)) +
     alpha = 0.7
   )
 p
+
 ggsave(
-  "C:/Users/Hannah Pil/Documents/gemmalab/BZea/BZea phenotyping/BZeaPheno/output/BZea_ridges_black.png",
+  "output/BZea_ridges_black.png",
   p,
   width = 9,
   height = 5.7,
   dpi = 300
 )
 #----------------2023 ridge-----------------------------------------------
-BZea23 <- read.csv("UPDATED_CLY23_D4_FieldBook.csv")
+BZea23 <- read.csv("data/UPDATED_CLY23_D4_FieldBook.csv")
 
 #set order and color
 species_order <- c("Zlux", "Mex", "Bals", "Zdip", "Hueh", "B73")
@@ -198,3 +191,93 @@ ggplot(BZea_df23, aes(x = SPAD2, y = species_mex, fill = species_mex)) +
   labs(x = "Leaf greenness index", y = "Species") +
   scale_x_continuous(limits = c(-10, 80))
 
+
+
+#-----------------------------both year ridge--------------------------------
+
+library(tidyverse)
+library(ggridges)
+
+B5 <- read.csv("data/corr_B5.csv") %>%
+  transmute(
+    SPAD = as.numeric(SPAD_corr),
+    species_mex = species_mex,
+    experiment = "B5"
+  )
+
+D4 <- read.csv("data/corr_D4.csv") %>%
+  transmute(
+    SPAD = as.numeric(SPAD2_corr),
+    species_mex = species_mex,
+    experiment = "D4"
+  )
+
+df <- bind_rows(B5, D4)
+
+df <- df %>%
+  mutate(
+    experiment = recode(
+      experiment,
+      "B5" = "2025",
+      "D4" = "2023"
+    )
+  )
+
+
+species_order <- c("Mex", "Zlux", "Hueh", "Zdip", "Bals", "B73")
+df$species_mex <- factor(df$species_mex, levels = species_order)
+
+species_colors <- c(
+  "Zlux" = "#00b836",
+  "Mex"  = "#5f9bfe",
+  "Bals" = "#f463e2",
+  "Zdip" = "#f8756d",
+  "Hueh" = "#b69c00",
+  "B73"  = "#02bec5"
+)
+
+df <- df %>%
+  filter(!is.na(species_mex), species_mex != "", species_mex != "Check") %>%
+  mutate(species_mex = factor(species_mex, levels = species_order))
+
+p <- ggplot(df, aes(x = SPAD, y = species_mex)) +
+  geom_density_ridges(
+    aes(
+      fill = species_mex,
+      point_color = species_mex,
+      point_fill  = species_mex
+    ),
+    alpha = 0.2,
+    point_alpha = 1,
+    jittered_points = TRUE,
+    scale = 1.6,
+    rel_min_height = 0.01,
+    point_shape = 21,
+    point_size = 1.6,
+    point_stroke = 0.4
+  ) +
+  facet_wrap(~experiment, nrow = 1) +
+  scale_fill_manual(values = species_colors, aesthetics = c("fill", "point_fill")) +
+  scale_color_manual(values = species_colors, aesthetics = c("colour", "point_color")) +
+  labs(x = "Leaf greenness index", y = "Species") +
+  scale_x_continuous(limits = c(-10, 75)) +
+  theme(
+    text = element_text(size = 16),
+    axis.title = element_text(size = 18),
+    axis.text = element_text(size = 14),
+    strip.text = element_text(size = 16),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line = element_line(color = "black", linewidth = 0.5),
+    legend.position = "none"
+  )
+
+p
+
+ggsave(
+  "output/BZea_ridges_2023_2025.png",
+  p,
+  width = 8,
+  height = 7,
+  dpi = 300
+)

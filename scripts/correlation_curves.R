@@ -2,7 +2,7 @@ library(dplyr)
 library(ggplot2)
 
 # read in dfs
-D4 <- read.csv("corr_D4.csv",
+D4 <- read.csv("data/corr_D4.csv",
                colClasses = c(
                  "CLY23_D4"   = "factor",
                  "Rep"        = "factor",
@@ -21,7 +21,7 @@ D4 <- read.csv("corr_D4.csv",
                )
 )
 
-B5 <- read.csv("corr_B5.csv",
+B5 <- read.csv("data/corr_B5.csv",
                colClasses = c(
                  "CLY25_B5"   = "factor",
                  "Rep"        = "factor",

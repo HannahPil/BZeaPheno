@@ -1,14 +1,10 @@
-install.packages("SpATS")
-install.packages("statgenHTP")
 library(SpATS)
 library(statgenHTP)
 library(dplyr)
 
 #set up data--------------------------------------------------------------------
 
-setwd("C:/Users/Hannah Pil/Documents/gemmalab/BZea/BZea phenotyping/BZeaPheno")
-
-manifest_B5 <- read.csv("B5_spats_manifest.csv")
+manifest_B5 <- read.csv("data/B5_spats_manifest.csv")
 
 manifest_B5 <- manifest_B5 |>
   transform(
@@ -26,8 +22,11 @@ manifest_B5 <- manifest_B5 |>
     EH   = as.numeric(EH),
     NBR   = as.numeric(NBR),
     SPAD   = as.numeric(SPAD),
-    LAE = as.numeric(LAE)
+    LAE    = as.numeric(LAE),
+    StPi   = as.numeric(StPi),
+    StPu   = as.numeric(StPu)
   )
+
 
 #-----statgen model run--------------------------------------------
 
@@ -77,7 +76,7 @@ for(tr in traits_B5) {
     left_join(manifest_B5[,c("Plot_id","Genotype","Rep","Row","Range")], by="Plot_id") |>
     arrange(Plot_id)   # <-- sort by Plot_id
   
-  write.csv(corr, paste0("B5_", tr, "_2025.csv"), row.names = FALSE)
+  write.csv(corr, paste0("data/B5_", tr, "_2025.csv"), row.names = FALSE)
 }
 #-----------loop to generate spatial plot------------
 traits_B5 <- c("DTS","DTA","GDDTS","GDDTA","PH","EN","EH","NBR","SPAD", "LAE")
@@ -117,9 +116,29 @@ for(tr in traits_B5) {
   dev.off()
 }
 
+#-----------loop for extra traits---------------
+extra_traits_B5 <- c("StPi","StPu")
+
+for(tr in extra_traits_B5) {
+  
+  fit <- fitModels(
+    TP = phenoTP_B5,
+    trait = tr,
+    engine = "SpATS",
+    what = "fixed"
+  )
+  
+  corr <- getCorrected(fit) |>
+    rename(Plot_id = plotId) |>
+    left_join(manifest_B5[,c("Plot_id","Genotype","Rep","Row","Range")], by="Plot_id") |>
+    arrange(Plot_id)
+  
+  write.csv(corr, paste0("data/B5_", tr, "_2025.csv"), row.names = FALSE)
+}
+
 
 #--------------------predicted N analysis--------------------------------------
-b5_N <- read.csv("B5_block2_predictedN.csv")
+b5_N <- read.csv("data/B5_block2_predictedN.csv")
 
 b5_N <- b5_N |>
   transform(
@@ -195,15 +214,13 @@ corr_B5_N <- getCorrected(fit_B5_N) |>
 
 write.csv(
   corr_B5_N,
-  "B5_block2_PredictedN_corrected.csv",
+  "data/B5_block2_PredictedN_corrected.csv",
   row.names = FALSE
 )
 
 #-----------------D4 ANALYSIS------------D4 ANALYSIS--------------------D4 ANALYSIS--------------------------D4 ANALYSIS------------------------------#
 
-setwd("C:/Users/Hannah Pil/Documents/gemmalab/BZea/BZea phenotyping/BZeaPheno")
-
-manifest_D4 <- read.csv("D4_spats_manifest.csv")
+manifest_D4 <- read.csv("data/D4_spats_manifest.csv")
 #map <- read.csv("B5_spats_map.csv", header = FALSE)
 
 manifest_D4 <- manifest_D4 |>
@@ -215,15 +232,20 @@ manifest_D4 <- manifest_D4 |>
     Range   = as.numeric(Range),
     GDDTS   = as.numeric(GDDTS),
     GDDTA   = as.numeric(GDDTA),
-    PH   = as.numeric(PH),
-    EN   = as.numeric(EN),
-    EH   = as.numeric(EH),
-    NBR   = as.numeric(NBR),
+    PH      = as.numeric(PH),
+    EN      = as.numeric(EN),
+    EH      = as.numeric(EH),
+    NBR     = as.numeric(NBR),
     SPAD1   = as.numeric(SPAD1),
-    SPAD2   = as.numeric(SPAD2)
+    SPAD2   = as.numeric(SPAD2),
+    StPu    = as.numeric(StPu),
+    StPi    = as.numeric(StPi),
+    BW      = as.numeric(BW),
+    BL      = as.numeric(BL),
+    SL      = as.numeric(SL)
   )
-# SpATS model run
 
+# SpATS model run (since switched to statgen)
 spatsD4 <- SpATS(
   response = "PH",
   spatial  = ~ SAP(Row, Range, nseg = c(2,4), degree = 3, pord = 2),
@@ -233,7 +255,6 @@ spatsD4 <- SpATS(
   genotype.as.random = FALSE  # true for blups and false for blues
 )
 print(spatsD4)
-
 
 ##-----statgen model run--------------------------------------------
 
@@ -253,7 +274,6 @@ phenoTP_D4 <- createTimePoints(
   timeFormat     = "%Y-%m-%d"     # match fake date format
 )
 
-
 ## Fit spatial model for one or more traits
 fit_D4_PH <- fitModels(
   TP       = phenoTP_D4,
@@ -265,22 +285,45 @@ fit_D4_PH <- fitModels(
 ## Plot spatial trend (optional visualization)
 plot(fit_D4_PH, timePoints = "2024-07-01", plotType = "spatial", spaTrend = "raw")
 
-#-----------loop for all traits---------------
-traits_D4 <- c("GDDTS","GDDTA","PH","EH","NBR","SPAD1","SPAD2")
+#-----------loop for all traits (all fixed)---------------
+traits_D4 <- c("GDDTS","GDDTA","PH","EH","NBR","SPAD1","SPAD2",
+               "StPu","StPi","BW","BL","SL")
+
+# start a combined table that will accumulate trait_corr columns
+D4_corr_wide <- manifest_D4 |>
+  dplyr::select(Plot_id) |>
+  dplyr::distinct() |>
+  dplyr::arrange(Plot_id)
 
 for(tr in traits_D4) {
+  
   fit <- fitModels(
     TP = phenoTP_D4,
     trait = tr,
     engine = "SpATS",
-    useCheck = TRUE
+    what = "fixed"
   )
   
   corr <- getCorrected(fit) |>
-    rename(Plot_id = plotId) |>
-    left_join(manifest_D4[,c("Plot_id","Genotype","Rep","Row","Range")], by="Plot_id")
+    dplyr::rename(Plot_id = plotId) |>
+    dplyr::left_join(
+      manifest_D4[,c("Plot_id","Genotype","Rep","Row","Range")],
+      by = "Plot_id"
+    )
   
-  write.csv(corr, paste0("D4_", tr, "_2023.csv"), row.names = FALSE)
+  # write the per-trait corrected table (your existing behavior)
+  write.csv(corr, paste0("data/D4_", tr, "_2023.csv"), row.names = FALSE)
+  
+  # pull out just Plot_id + the trait's *_corr column, then join into the wide table
+  corr_col <- paste0(tr, "_corr")
+  
+  D4_corr_wide <- D4_corr_wide |>
+    dplyr::left_join(
+      corr[, c("Plot_id", corr_col)],
+      by = "Plot_id"
+    ) |>
+    dplyr::arrange(Plot_id)
 }
 
-plot(fit_D4_SPAD2, timePoints = "2024-07-01", plotType = "spatial", spaTrend = "raw")
+# write the combined spreadsheet
+write.csv(D4_corr_wide, "data/D4_all_traits_corr_2023.csv", row.names = FALSE)
