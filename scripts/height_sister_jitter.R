@@ -49,8 +49,10 @@ height_at_date <- heights |>
   select(plot, height_cm)
 
 # ------------------------------- map plots to genotypes -----------------------
+# keep only Rep 3 (matches RNA-seq tissue sampling)
 
 plot_geno <- manifest |>
+  filter(Rep == 3) |>
   select(Plot_id, Genotype) |>
   distinct()
 
@@ -97,11 +99,11 @@ plot_info <- plot_info |>
 plot_info <- plot_info |>
   filter(!Genotype %in% c("B73", "Purple Check"))
 
-# BC1 family = first 10 characters of genotype name
+# BC1 family = first 13 characters of genotype name
 plot_info <- plot_info |>
   mutate(
-    bc1_family = substr(Genotype, 1, 10),
-    allele = ifelse(has_teo, "Teosinte", "B73")
+    bc1_family = substr(Genotype, 1, 13),
+    allele = ifelse(has_teo, "Teo", "Sis")
   )
 
 # keep only families that have BOTH teo and B73 alleles
@@ -115,6 +117,19 @@ teo_carriers <- plot_info |> filter(has_teo) |> select(Genotype, Species, bc1_fa
 print(as.data.frame(teo_carriers), row.names = FALSE)
 
 cat("\nFamilies with teo + sister pairs:", length(unique(families_with_both$bc1_family)), "\n")
+
+# ---- export carrier + sister list --------------------------------------------
+carrier_sister_list <- families_with_both |>
+  select(Genotype, Species, bc1_family, allele) |>
+  distinct() |>
+  arrange(bc1_family, allele, Genotype)
+
+write.csv(
+  carrier_sister_list,
+  file.path(out_dir, paste0(FOCUS_GENE, "_carriers_and_sisters.csv")),
+  row.names = FALSE
+)
+cat("Wrote", nrow(carrier_sister_list), "lines to carriers_and_sisters.csv\n")
 
 # ------------------------------- colors ---------------------------------------
 
@@ -145,8 +160,8 @@ family_means <- families_with_both |>
     names_from  = allele,
     values_from = c(mean_ht, n)
   ) |>
-  filter(!is.na(mean_ht_Teosinte), !is.na(mean_ht_B73)) |>
-  mutate(effect = mean_ht_Teosinte - mean_ht_B73) |>
+  filter(!is.na(mean_ht_Teo), !is.na(mean_ht_Sis)) |>
+  mutate(effect = mean_ht_Teo - mean_ht_Sis) |>
   left_join(
     families_with_both |>
       filter(has_teo) |>
@@ -155,8 +170,8 @@ family_means <- families_with_both |>
     by = "bc1_family"
   )
 
-cat("\n=== Effect sizes (teo - B73) within BC1 families ===\n")
-print(as.data.frame(family_means |> select(bc1_family, species_mex, effect, n_Teosinte, n_B73)), row.names = FALSE)
+cat("\n=== Effect sizes (teo - sister) within BC1 families ===\n")
+print(as.data.frame(family_means |> select(bc1_family, species_mex, effect, n_Teo, n_Sis)), row.names = FALSE)
 
 write.csv(
   family_means,
@@ -214,7 +229,7 @@ rna_samples <- rna_meta |>
     !genotype %in% c("B73", "Purple Check", "NA")
   ) |>
   mutate(
-    bc1_family = substr(genotype, 1, 10),
+    bc1_family = substr(genotype, 1, 13),
     expression = focus_expr[sample_id]
   ) |>
   filter(!is.na(expression))
@@ -231,7 +246,7 @@ rna_intro <- tibble(
 
 rna_samples <- rna_samples |>
   left_join(rna_intro, by = "genotype") |>
-  mutate(allele = ifelse(has_teo_rna, "Teosinte", "B73"))
+  mutate(allele = ifelse(has_teo_rna, "Teo", "Sis"))
 
 # compute expression effect per BC1 family (teo mean - B73 mean)
 # keep only families with both alleles represented in RNA data
@@ -246,8 +261,8 @@ expr_family_means <- rna_samples |>
     names_from  = allele,
     values_from = c(mean_expr, n_expr)
   ) |>
-  filter(!is.na(mean_expr_Teosinte), !is.na(mean_expr_B73)) |>
-  mutate(expr_effect = mean_expr_Teosinte - mean_expr_B73)
+  filter(!is.na(mean_expr_Teo), !is.na(mean_expr_Sis)) |>
+  mutate(expr_effect = mean_expr_Teo - mean_expr_Sis)
 
 cat("\n=== Expression effect sizes (families with RNA data for both alleles) ===\n")
 print(as.data.frame(expr_family_means), row.names = FALSE)
@@ -363,7 +378,7 @@ build_facet_jitter <- function(df_fam, fam_levels, show_legend = TRUE,
   df_fam <- df_fam |>
     mutate(
       bc1_family = factor(bc1_family, levels = fam_levels),
-      allele     = factor(allele, levels = c("B73", "Teosinte"))
+      allele     = factor(allele, levels = c("Sis", "Teo"))
     )
 
   fstats <- df_fam |>
@@ -406,7 +421,7 @@ build_facet_jitter <- function(df_fam, fam_levels, show_legend = TRUE,
     ) +
     facet_wrap(~ bc1_family, nrow = nrow) +
     scale_fill_manual(values = taxa_colors, name = "teosinte taxa") +
-    scale_x_discrete(labels = c("B73" = "B73", "Teosinte" = "Teo")) +
+    scale_x_discrete(labels = c("Sis" = "Sis", "Teo" = "Teo")) +
     labs(
       x = "genotype",
       y = paste0("plant height on ", HEIGHT_DATE, " (cm)"),
@@ -661,7 +676,7 @@ geno_expr <- rna_meta |>
     .groups = "drop"
   )
 
-# genotype-level mean height (average across field reps/plots)
+# genotype-level height from Rep 3 only (plot_geno already filtered)
 geno_height <- heights |>
   filter(flight_date == HEIGHT_DATE) |>
   inner_join(plot_geno, by = c("plot" = "Plot_id")) |>
@@ -679,8 +694,8 @@ corr_df <- geno_expr |>
   left_join(intro_status, by = c("genotype" = "Genotype")) |>
   mutate(
     has_teo = replace_na(has_teo, FALSE),
-    allele = ifelse(has_teo, "Teosinte", "B73"),
-    allele = factor(allele, levels = c("B73", "Teosinte"))
+    allele = ifelse(has_teo, "Teo", "Sis"),
+    allele = factor(allele, levels = c("Sis", "Teo"))
   )
 
 cat("\n=== Height vs expression correlation data ===\n")
@@ -706,7 +721,7 @@ p_corr_status <- ggplot(corr_df, aes(x = mean_expr, y = mean_ht)) +
   ) +
   geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed") +
   scale_fill_manual(
-    values = c("B73" = "grey70", "Teosinte" = "darkorange"),
+    values = c("Sis" = "grey70", "Teo" = "darkorange"),
     name = "Allele at gene"
   ) +
   annotate(
