@@ -43,10 +43,10 @@ LAE:	Number of leaves above primary ear.
 | `inv4m_analysis.R` | Analysis of the Inv4m inversion region |
 | `octexp_analysis.R` | Nitrogen experiment analysis of BZea lines derived from *Zea diploperennis* |
 | `jitter.R` | General jitter plots for trait comparisons |
-| `N_jitter.R` | Jitter plots for ear number (N) |
+| `N_jitter.R` | Jitter plots by nitrogen treatment |
 | `beeswarms.R` | Beeswarm plots for trait distributions |
-| `beeswarm_N.R` | Beeswarm plots for ear number |
-| `N_actual_v_predicted.R` | Actual vs predicted ear number comparison |
+| `beeswarm_N.R` | Beeswarm plots by nitrogen treatment |
+| `N_actual_v_predicted.R` | Actual vs predicted comparison under nitrogen treatments |
 | `violin.R` | Violin plots for trait distributions |
 | `ridges.R` | Ridge plots for trait distributions |
 | `histograms.R` | Histogram plots |
