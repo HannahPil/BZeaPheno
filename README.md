@@ -41,7 +41,7 @@ LAE:	Number of leaves above primary ear.
 | `drone_vs_fieldbook_height.R` | Correlation of drone-derived heights (8/24) vs hand-measured fieldbook PH |
 | `introgression_frequency_heatmap.R` | Heatmap of introgression frequencies across the genome |
 | `inv4m_analysis.R` | Analysis of the Inv4m inversion region |
-| `octexp_analysis.R` | Octoploid expression analysis |
+| `octexp_analysis.R` | Nitrogen experiment analysis of BZea lines derived from *Zea diploperennis* |
 | `jitter.R` | General jitter plots for trait comparisons |
 | `N_jitter.R` | Jitter plots for ear number (N) |
 | `beeswarms.R` | Beeswarm plots for trait distributions |
